@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🎬 YouTube Automation Tool</title>
+<link rel="stylesheet" href="/static/style.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="logo">
+    <i class="fa-brands fa-youtube"></i>
+    <span>YT Automation</span>
+  </div>
+  <nav>
+    <a href="#" class="nav-item active" data-tab="analyze"><i class="fa fa-wand-magic-sparkles"></i> AI ক্লিপ তৈরি</a>
+    <a href="#" class="nav-item" data-tab="manual"><i class="fa fa-scissors"></i> ম্যানুয়াল ক্রপ</a>
+    <a href="#" class="nav-item" data-tab="schedule"><i class="fa fa-clock"></i> অটো আপলোড</a>
+    <a href="#" class="nav-item" data-tab="logs"><i class="fa fa-list-check"></i> আপলোড লগ</a>
+    <a href="#" class="nav-item" data-tab="settings"><i class="fa fa-gear"></i> সেটিংস</a>
+  </nav>
+  <div class="yt-connect-widget" id="ytWidget">
+    <div class="yt-status disconnected" id="ytStatus">
+      <i class="fa-brands fa-youtube"></i>
+      <span>YouTube কানেক্ট নেই</span>
+    </div>
+    <button class="btn-yt-connect" id="btnConnect" onclick="connectYouTube()">
+      <i class="fa fa-link"></i> কানেক্ট করুন
+    </button>
+    <button class="btn-yt-logout hidden" id="btnLogout" onclick="logoutYouTube()">
+      <i class="fa fa-right-from-bracket"></i> লগআউট
+    </button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+  <header class="topbar">
+    <button class="menu-toggle" onclick="toggleSidebar()"><i class="fa fa-bars"></i></button>
+    <h1 id="pageTitle">🎬 AI ভাইরাল ক্লিপ তৈরি</h1>
+    <div class="channel-badge hidden" id="channelBadge">
+      <img id="channelThumb" src="" alt=""/>
+      <span id="channelName">My Channel</span>
+    </div>
+  </header>
+
+  <!-- ═══ TAB: ANALYZE ═══════════════════════════════════════════════════ -->
+  <div class="tab-content active" id="tab-analyze">
+    <div class="card">
+      <h2><i class="fa fa-link"></i> ভিডিও লিংক দিন</h2>
+      <div class="input-row">
+        <input type="url" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." class="url-input"/>
+        <button class="btn-primary" onclick="startAnalysis()"><i class="fa fa-bolt"></i> বিশ্লেষণ শুরু</button>
+      </div>
+      <div class="options-row">
+        <label class="option-chip">
+          <input type="checkbox" id="useGemini" checked/>
+          <span><i class="fa fa-google"></i> Gemini AI</span>
+        </label>
+        <label class="option-chip">
+          <input type="checkbox" id="useGrok" checked/>
+          <span><i class="fa fa-brain"></i> Grok AI</span>
+        </label>
+        <div class="num-clips-wrap">
+          <label>ক্লিপ সংখ্যা:</label>
+          <input type="number" id="numClips" value="5" min="1" max="15" class="num-input"/>
+        </div>
+        <select id="whisperModel" class="select-input">
+          <option value="base">Whisper Base (দ্রুত)</option>
+          <option value="small">Whisper Small</option>
+          <option value="medium">Whisper Medium (নির্ভুল)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Progress Card -->
+    <div class="card hidden" id="progressCard">
+      <div class="progress-header">
+        <h3 id="progressTitle">⏳ প্রসেসিং হচ্ছে...</h3>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progressBar" style="width:0%"></div>
+      </div>
+      <p id="progressMsg" class="progress-msg"></p>
+      <div class="steps-indicator">
+        <div class="step" id="step-dl"><i class="fa fa-download"></i> ডাউনলোড</div>
+        <div class="step" id="step-tr"><i class="fa fa-microphone"></i> ট্রান্সক্রিপ্ট</div>
+        <div class="step" id="step-ai"><i class="fa fa-robot"></i> AI বিশ্লেষণ</div>
+        <div class="step" id="step-cp"><i class="fa fa-scissors"></i> ক্লিপিং</div>
+        <div class="step" id="step-done"><i class="fa fa-check"></i> সম্পন্ন</div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsArea"></div>
+  </div>
+
+  <!-- ═══ TAB: MANUAL CROP ════════════════════════════════════════════════ -->
+  <div class="tab-content hidden" id="tab-manual">
+    <div class="card">
+      <h2><i class="fa fa-scissors"></i> ম্যানুয়াল ক্রপ</h2>
+      <p class="hint">আগে AI বিশ্লেষণ করুন অথবা নিচে ভিডিও পাথ দিন।</p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>ভিডিও ফাইল পাথ</label>
+          <input type="text" id="manualVideoPath" placeholder="/app/temp/job_video.mp4" class="form-input"/>
+        </div>
+        <div class="form-group">
+          <label>শুরুর সময় (MM:SS বা HH:MM:SS)</label>
+          <input type="text" id="manualStart" placeholder="4:05" class="form-input"/>
+        </div>
+        <div class="form-group">
+          <label>শেষের সময়</label>
+          <input type="text" id="manualEnd" placeholder="6:02" class="form-input"/>
+        </div>
+        <div class="form-group">
+          <label>আউটপুট নাম</label>
+          <input type="text" id="manualName" placeholder="my_short_clip" class="form-input"/>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="doManualCrop()"><i class="fa fa-cut"></i> ক্রপ করুন</button>
+    </div>
+    <div id="manualResult"></div>
+  </div>
+
+  <!-- ═══ TAB: SCHEDULE ════════════════════════════════════════════════════ -->
+  <div class="tab-content hidden" id="tab-schedule">
+    <div class="card">
+      <h2><i class="fa fa-clock"></i> অটো আপলোড শিডিউল</h2>
+      <p class="hint">Google Drive এর পাবলিক ফোল্ডার লিংক দিন যেখানে ZIP ফাইলে শর্টস ভিডিও আছে।</p>
+      <div class="form-group">
+        <label>Google Drive ফোল্ডার লিংক</label>
+        <input type="url" id="driveFolderLink" placeholder="https://drive.google.com/drive/folders/..." class="form-input"/>
+      </div>
+      <div class="form-group">
+        <label>আপলোড সময় (BD Time - ২৪ঘণ্টা)</label>
+        <div class="times-row">
+          <label class="option-chip"><input type="checkbox" value="12:00" class="time-check" checked/><span>🕛 দুপুর ১২:০০</span></label>
+          <label class="option-chip"><input type="checkbox" value="20:00" class="time-check" checked/><span>🌙 রাত ৮:০০</span></label>
+          <label class="option-chip"><input type="checkbox" value="09:00" class="time-check"/><span>☀️ সকাল ৯:০০</span></label>
+          <label class="option-chip"><input type="checkbox" value="18:00" class="time-check"/><span>🌆 সন্ধ্যা ৬:০০</span></label>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="createSchedule()"><i class="fa fa-calendar-plus"></i> শিডিউল তৈরি করুন</button>
+    </div>
+
+    <div class="card" id="schedulesCard">
+      <h3><i class="fa fa-list"></i> সক্রিয় শিডিউল</h3>
+      <div id="schedulesList"><p class="text-muted">লোড হচ্ছে...</p></div>
+      <h3 style="margin-top:24px"><i class="fa fa-calendar-check"></i> পরবর্তী আপলোড</h3>
+      <div id="nextJobs"><p class="text-muted">লোড হচ্ছে...</p></div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: LOGS ═══════════════════════════════════════════════════════ -->
+  <div class="tab-content hidden" id="tab-logs">
+    <div class="card">
+      <h2><i class="fa fa-list-check"></i> আপলোড লগ</h2>
+      <button class="btn-secondary" onclick="loadLogs()"><i class="fa fa-refresh"></i> রিফ্রেশ</button>
+      <div id="logsList" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: SETTINGS ════════════════════════════════════════════════════ -->
+  <div class="tab-content hidden" id="tab-settings">
+    <div class="card">
+      <h2><i class="fa fa-key"></i> API Keys সেটিংস</h2>
+      <p class="hint">এখানে দেওয়া API keys এনক্রিপ্টেড ডেটাবেজে সেভ হবে।</p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label><i class="fa fa-google"></i> Gemini API Key</label>
+          <input type="password" id="geminiKey" placeholder="AIza..." class="form-input"/>
+        </div>
+        <div class="form-group">
+          <label><i class="fa fa-brain"></i> Grok API Key (Groq)</label>
+          <input type="password" id="grokKey" placeholder="gsk_..." class="form-input"/>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-brands fa-youtube"></i> YouTube Client ID</label>
+          <input type="password" id="ytClientId" placeholder="..." class="form-input"/>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-brands fa-youtube"></i> YouTube Client Secret</label>
+          <input type="password" id="ytClientSecret" placeholder="..." class="form-input"/>
+        </div>
+        <div class="form-group">
+          <label><i class="fa fa-hard-drive"></i> Google Drive API Key</label>
+          <input type="password" id="driveKey" placeholder="AIza..." class="form-input"/>
+        </div>
+        <div class="form-group">
+          <label><i class="fa fa-microphone"></i> OpenAI API Key (Whisper)</label>
+          <input type="password" id="openaiKey" placeholder="sk-..." class="form-input"/>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="saveSettings()"><i class="fa fa-save"></i> সেটিংস সেভ করুন</button>
+    </div>
+    <div class="card">
+      <h2><i class="fa fa-circle-info"></i> গাইড</h2>
+      <div class="guide-list">
+        <div class="guide-item"><span class="badge">1</span><p><strong>Gemini API Key:</strong> <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a> থেকে নিন</p></div>
+        <div class="guide-item"><span class="badge">2</span><p><strong>Grok API Key:</strong> <a href="https://console.groq.com" target="_blank">console.groq.com</a> থেকে নিন (ফ্রি!)</p></div>
+        <div class="guide-item"><span class="badge">3</span><p><strong>YouTube OAuth:</strong> <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a> থেকে OAuth 2.0 credentials তৈরি করুন</p></div>
+        <div class="guide-item"><span class="badge">4</span><p><strong>Railway Deploy:</strong> <code>railway up</code> কমান্ড দিন। PORT env variable অটো সেট হবে।</p></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TEXT OVERLAY MODAL -->
+<div class="modal hidden" id="textModal">
+  <div class="modal-box">
+    <h3><i class="fa fa-text-height"></i> টেক্সট ওভারলে যোগ করুন</h3>
+    <input type="hidden" id="modalVideoPath"/>
+    <div class="form-group">
+      <label>টেক্সট লিখুন</label>
+      <input type="text" id="overlayText" placeholder="এখানে টেক্সট লিখুন..." class="form-input"/>
+    </div>
+    <div class="form-group">
+      <label>পজিশন</label>
+      <select id="overlayPos" class="select-input">
+        <option value="top">উপরে</option>
+        <option value="center" selected>মাঝে</option>
+        <option value="bottom">নিচে</option>
+      </select>
+    </div>
+    <div class="two-col">
+      <div class="form-group">
+        <label>ফন্ট সাইজ</label>
+        <input type="number" id="overlayFontSize" value="60" min="20" max="120" class="form-input"/>
+      </div>
+      <div class="form-group">
+        <label>ব্যাকগ্রাউন্ড অপাসিটি</label>
+        <input type="range" id="overlayOpacity" min="0" max="1" step="0.1" value="0.6" class="range-input"/>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="applyTextOverlay()"><i class="fa fa-check"></i> প্রয়োগ করুন</button>
+      <button class="btn-secondary" onclick="closeModal('textModal')"><i class="fa fa-times"></i> বাতিল</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPLOAD MODAL -->
+<div class="modal hidden" id="uploadModal">
+  <div class="modal-box">
+    <h3><i class="fa-brands fa-youtube"></i> YouTube এ আপলোড করুন</h3>
+    <input type="hidden" id="uploadVideoPath"/>
+    <input type="hidden" id="uploadThumbPath"/>
+    <div class="form-group">
+      <label>টাইটেল</label>
+      <input type="text" id="uploadTitle" class="form-input"/>
+    </div>
+    <div class="form-group">
+      <label>ডিস্ক্রিপশন</label>
+      <textarea id="uploadDesc" class="form-input" rows="4"></textarea>
+    </div>
+    <div class="form-group">
+      <label>হ্যাশট্যাগ</label>
+      <input type="text" id="uploadHashtags" class="form-input"/>
+    </div>
+    <div class="form-group">
+      <label>প্রাইভেসি</label>
+      <select id="uploadPrivacy" class="select-input">
+        <option value="public">Public</option>
+        <option value="private">Private</option>
+        <option value="unlisted">Unlisted</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="doUpload()"><i class="fa fa-upload"></i> আপলোড করুন</button>
+      <button class="btn-secondary" onclick="closeModal('uploadModal')">বাতিল</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
